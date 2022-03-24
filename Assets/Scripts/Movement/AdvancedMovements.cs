@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -93,15 +94,16 @@ public class AdvancedMovements : MonoBehaviour
     }
 
 
-    private async void moveThroughForce(){
+    private  void moveThroughForce(){
         float targetSpeed = horizontalDirection * moveSpeed;
         float speedDif = targetSpeed - playerRb.velocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : deacceleration;
         float movement = Mathf.Pow(Mathf.Abs(speedDif) * accelRate, velocityPower) * Mathf.Sign(speedDif);
-        Debug.Log("Still applying movement ++  " + movement  + " accel rate being  " + accelRate + "  targetSpeed being" + targetSpeed + " speedDifference beging" + speedDif);
-        Debug.Log("Velocity power statement  ++ " + Mathf.Pow(Mathf.Abs(speedDif) * accelRate, velocityPower));
+        float fc = (float)Math.Round(movement * 100f) / 100f;
+        // Debug.Log("Still applying movement ++  " + movement  + " accel rate being  " + accelRate + "  targetSpeed being" + targetSpeed + " speedDifference beging" + speedDif);
+        // Debug.Log("Velocity power statement  ++ " + Mathf.Pow(Mathf.Abs(speedDif) * accelRate, velocityPower) + "  " + (int)movement + "  using mathf round " + Mathf.Round(movement) + "  " + fc);
 
-        if(!Mathf.Approximately(movement, 0.0f)){    
+        if(!Mathf.Approximately(fc, 0.0f)){    
             playerRb.AddForce(movement * Vector2.right);
         }
         

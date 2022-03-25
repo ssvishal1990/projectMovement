@@ -33,11 +33,14 @@ public class AdvancedMovements : MonoBehaviour
     [SerializeField] private float jumpCoyoteTime;
     [SerializeField] private float jumpBufferTime;
     [SerializeField] private float fallGravityMultiplier;
+    [SerializeField] private int aaditionalJumps;
+    [SerializeField] private float jumpBufferingRayCastLength;
 
 
     [Header("Checks for ground")]
     [SerializeField] private Transform groundCheckPoint;
     [SerializeField] private Vector2 GroundCheckBoxSize;
+    [SerializeField] private float groundCheckCircleSize;
 
 
 
@@ -45,6 +48,20 @@ public class AdvancedMovements : MonoBehaviour
     [SerializeField] private LayerMask groundLayer;
 
     private float horizontalDirection;
+    public float LastOnGroundTime { get; private set; }
+    public float LastJumpTime { get; private set; }
+
+    public  bool isJumping { get; private set; }
+    public  bool jumpKeyReleased { get; private set; }
+
+
+    private float coyoteTime = 0.2f;
+    public float coyoteTimeCounter = 0;
+    public  int currentJumpCounter;
+    private bool jumpQueued = false;
+
+    private bool onGround = true;
+
 
     
 
@@ -65,19 +82,48 @@ public class AdvancedMovements : MonoBehaviour
         moveThroughForce();
         // move();
         applyFriction();
+        checkIfGrounded();
+
+
+    }
+
+    void checkIfGrounded(){
+        onGround = Physics2D.OverlapCircle(groundCheckPoint.position, groundCheckCircleSize, groundLayer); 
+
+        if(onGround){  // 
+            coyoteTimeCounter = jumpCoyoteTime;
+        }else{
+            coyoteTimeCounter -= Time.deltaTime;
+        }
+    }
+
+    
+
+    private void OnDrawGizmosSelected()
+    {
+        if(groundCheckPoint == null){
+            return;
+        }
+        Gizmos.DrawWireSphere(groundCheckPoint.position, groundCheckCircleSize);    
     }
 
     private void applyFriction()
     {
         if (Mathf.Abs(horizontalDirection) < 0.4f)
         {
-            playerRb.drag = _linearDrag;
+            playerRb.drag = _linearDrag; // Approach 1
+
+            float amount = Mathf.Min(Mathf.Abs(playerRb.velocity.x), Mathf.Abs(frictionAmount));
+            amount *= Mathf.Sign(playerRb.velocity.x);
+            playerRb.AddForce(Vector2.right * -amount, ForceMode2D.Impulse);
         }
         else
         {
             playerRb.drag = 0;
         }
     }
+
+    
 
     private void Move()
     {
@@ -131,16 +177,58 @@ public class AdvancedMovements : MonoBehaviour
         // Debug.Log(context + "  horizon value " + horizontalDirection);
     }
 
-    public void Jump(InputAction.CallbackContext context)
+    public void TriggerJump(InputAction.CallbackContext context)
     {
-        if (context.performed && playerRb.IsTouchingLayers(LayerMask.GetMask("Ground")))
+        if (context.performed && (coyoteTimeCounter > 0f))// || currentJumpCounter > 0) )
         {
-            playerRb.velocity = new Vector2(playerRb.velocity.x, jForce);
+            // playerRb.velocity = new Vector2(playerRb.velocity.x, jForce);
+            Jump();
+        }else if(context.performed){
+            checkIfNearGround();
         }
 
-        // if (context.canceled && playerRb.velocity.y > 0f)
-        // {
-        //     playerRb.velocity = new Vector2(playerRb.velocity.x, playerRb.velocity.y * 0.5f);
-        // }
+        if (context.canceled){
+            jumpKeyReleased = true;
+            if(currentJumpCounter == 0){
+               coyoteTimeCounter = 0f; 
+            }
+            // coyoteTimeCounter = 0f;
+            if(playerRb.velocity.y > 0){
+               playerRb.velocity = new Vector2(playerRb.velocity.x, playerRb.velocity.y * 0.5f); 
+            }
+        }
+    }
+
+    private void checkIfNearGround(){
+        RaycastHit2D hit = Physics2D.Raycast(groundCheckPoint.position, Vector2.down, jumpBufferingRayCastLength, groundLayer);
+        Debug.Log("Check if near ground got called");
+        Debug.DrawRay(hit.point, hit.normal, Color.green);
+        if(hit && playerRb.velocity.y < 0){
+            Debug.Log("Inside it's iff condition");
+            Debug.DrawRay(hit.point, hit.normal, Color.red);
+            jumpQueued = true;
+        }
+    }
+
+    private void Jump()
+    {
+        playerRb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+        LastOnGroundTime = 0;
+        LastJumpTime = 0;
+        isJumping = true;
+        jumpKeyReleased = false;
+        currentJumpCounter--;
+    }
+
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if(other.tag == "Ground"){
+            currentJumpCounter = aaditionalJumps;
+            if(jumpQueued){
+                jumpQueued = false;
+                Jump();
+            }
+        }
     }
 }

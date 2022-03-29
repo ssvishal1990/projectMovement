@@ -183,7 +183,7 @@ public class AdvancedMovements : MonoBehaviour
         {
             // playerRb.velocity = new Vector2(playerRb.velocity.x, jForce);
             Jump();
-        }else if(context.performed){
+        }else if(true){ // Very important to change here
             checkIfNearGround();
         }
 
